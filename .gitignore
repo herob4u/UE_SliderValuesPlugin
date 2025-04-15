@@ -1,0 +1,11 @@
+# Blacklist files/folders in same directory as the .gitignore file
+/*
+
+# Whitelist some files
+!.gitignore
+!README.md
+!SliderValues.uplugin
+
+# Whitelist folders
+!Source/
+!Resources/
