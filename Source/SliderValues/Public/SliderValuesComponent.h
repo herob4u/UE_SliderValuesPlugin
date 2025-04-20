@@ -46,7 +46,7 @@ private:
 	TArray<FSliderInstance>& m_Instances;
 };
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable )
+UCLASS( ClassGroup=(SliderCustomization), meta=(BlueprintSpawnableComponent), Blueprintable )
 class SLIDERVALUES_API USliderValuesComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -55,6 +55,15 @@ class SLIDERVALUES_API USliderValuesComponent : public UActorComponent
 	static TDelegate<void(USliderValuesComponent*)> OnCreated;
 	static TDelegate<void(USliderValuesComponent*)> OnDestroyed;
 	static TDelegate<void(USliderValuesComponent*)> OnUpdated;
+
+	// Data is allocated by manager for efficiency.
+	struct FData
+	{
+		static constexpr int32 INVALID_ID = 0xffffffff;
+		USliderValuesComponent* m_Component = nullptr;
+		int32 m_Id = INVALID_ID;
+		bool m_IsDirty : 1 = false;
+	};
 public:
 	// Sets default values for this component's properties
 	USliderValuesComponent();
@@ -64,10 +73,12 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (RequiredAssetDataTags = "RowStructure=/Script/SliderValues.SliderDefinition"))
 	void RegisterSliderDefinitions(UDataTable* sliderDefinitionsDt);
 
+	static float GetDefaultValue(const FSliderDefinition& sliderDefinition);
+
 	int32 GetSliderIdx(const FName& sliderId) const;
 	const TArray<FSliderInstance>& GetSliderInstances() const { return SliderInstances; }
 	FConstSliderInstances GetSliderInstances() { return FConstSliderInstances(SliderInstances); }
-
+	
 	float GetSliderValue(const FName& sliderId) const;
 	float GetSliderValue(int32 sliderIdx) const;
 
@@ -76,11 +87,11 @@ public:
 	const TArray<FName>& GetSliderIds() const { return SliderIds; }
 
 	void ResetDefaultValues();
-	void ResetDefaultValue(const FName& sliderId);
-	void ResetDefaultValue(int32 sliderIdx);
+	void ResetDefaultValue(const FName& sliderId, bool sendChangedEvent = true);
+	void ResetDefaultValue(int32 sliderIdx, bool sendChangedEvent = true);
 
-	void SetSliderValue(const FName sliderId, float value);
-	void SetSliderValue(int32 sliderIdx, float value);
+	void SetSliderValue(const FName sliderId, float value, bool sendChangedEvent = true);
+	void SetSliderValue(int32 sliderIdx, float value, bool sendChangedEvent = true);
 	void SetSliderValues(const TMap<FName, float>& sliderIdToValues);
 	void SetSliderValues(const TArray<float>& sliderValues);
 
@@ -96,12 +107,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UDataTable> SliderDefinitionsDt;
 
+	// A Parameter can only be controlled by one, and only one slider.
+	// This allows for selective updates, see UpdateModified()
+	bool ExclusiveParameters;
+
 	TArray<FName> SliderIds;
 	TArray<FSliderInstance> SliderInstances;
-	//TArray<float> SliderValues;
 	TArray<FSliderDefinition> SliderDefinitions;
-
 	TMap<FName, int32> SliderIndexMap;
-
 	UCurveTable* CompositeSliders;
+
+	TSharedPtr<FData> ComponentData;
 };

@@ -6,21 +6,26 @@
 #include "SliderLinkBase.h"
 #include "SliderLinkMaterial.generated.h"
 
-/**
- * 
- */
 USTRUCT()
-struct SLIDERVALUES_API FSliderLinkMaterial : public FSliderLinkBase
+struct SLIDERVALUES_API FSliderLinkMaterialScalar : public FSliderLinkBase
 {
 	GENERATED_BODY()
-	
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<FName> LinkedParams;
+
+	UPROPERTY(EditDefaultsOnly)
+	UCurveFloat* StateValues;
 };
 
-template<>
-struct FSliderEvaluator<FSliderLinkMaterial>
+USTRUCT()
+struct SLIDERVALUES_API FSliderLinkMaterialColor : public FSliderLinkBase
 {
-	static decltype(auto) Evaluate(float state, const FSliderLinkMaterial& link)
-	{
-		return 1.2f;
-	}
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<FName> LinkedParams;
+
+	UPROPERTY(EditDefaultsOnly)
+	UCurveLinearColor* StateValues;
 };

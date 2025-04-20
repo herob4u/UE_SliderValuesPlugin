@@ -37,17 +37,30 @@ void USliderValuesManager::DrawImGui()
 	{
 		if (ImGui::Begin("SliderValuesManager"))
 		{
-			for (USliderValuesComponent* sliderComponent : m_Components)
+			for (const auto& data : m_ComponentsData)
 			{
-				DrawSliderComponent(sliderComponent);
+				if (USliderValuesComponent* sliderValuesComp = data.m_Component)
+				{
+					if (ImGui::CollapsingHeader(TCHAR_TO_UTF8(*sliderValuesComp->GetOwner()->GetName()), ImGuiTreeNodeFlags_Framed))
+					{
+						DrawSliderComponent(sliderValuesComp);
+						ImGui::Separator();
+						DrawComponentData(data);
+					}
+				}
 			}
+
+			ImGui::SeparatorText("Misc.");
+			ImGui::Text("Num Component Data: %i", m_ComponentsData.Num());
+			ImGui::Text("Bytes Component Data: %llu", m_ComponentsData.NumBytes());
+
+			ImGui::End();
 		}
 	}
 }
 
 void USliderValuesManager::DrawSliderComponent(USliderValuesComponent* sliderValuesComp)
 {
-	if (ImGui::CollapsingHeader(TCHAR_TO_UTF8(*sliderValuesComp->GetOwner()->GetName()), ImGuiTreeNodeFlags_Framed))
 	{
 		const auto& sliderDefinitions = sliderValuesComp->GetSliderDefinitions();
 		auto sliderInstances = sliderValuesComp->GetSliderInstances();
@@ -63,19 +76,29 @@ void USliderValuesManager::DrawSliderComponent(USliderValuesComponent* sliderVal
 			FString nameStr = sliderDefinitions[sliderIdx].DisplayName.ToString();
 			const char* nameCStr = TCHAR_TO_UTF8(*nameStr);
 
-			static float rangeMin = 0.0f;
-			static float rangeMax = 1.0f;
+			float rangeMin = sliderDefinitions[sliderIdx].SliderMin;
+			float rangeMax = sliderDefinitions[sliderIdx].SliderMax;
 
-			ImGui::SliderFloat(nameCStr, &sliderInstances[sliderIdx].Value, rangeMin, rangeMax);
+			if (ImGui::SliderFloat(nameCStr, &sliderInstances[sliderIdx].Value, rangeMin, rangeMax))
+			{
+				OnComponentUpdated(sliderValuesComp);
+			}
 		}
 	}
+}
+
+void USliderValuesManager::DrawComponentData(const USliderValuesComponent::FData& data)
+{
+	ImGui::SeparatorText("Data");
+	ImGui::Text("ID: %i", data.m_Id);
+	ImGui::Text("IsDirty: %s", data.m_IsDirty ? "true" : "false");
 }
 
 void USliderValuesManager::UpdateComponents(const Array<int32>& indices)
 {
 	for (int32 idx : indices)
 	{
-		USliderValuesComponent* sliderValuesComp = m_Components[idx];
+		USliderValuesComponent* sliderValuesComp = m_ComponentsData[idx].m_Component;
 		check(sliderValuesComp);
 
 		sliderValuesComp->UpdateSliders();
@@ -86,7 +109,7 @@ void USliderValuesManager::UpdateClearDirty(const Array<int32>& indices)
 {
 	for (int32 idx : indices)
 	{
-		m_UpdateInfo[idx].m_IsDirty = false;
+		m_ComponentsData[idx].m_IsDirty = false;
 	}
 }
 
@@ -94,14 +117,15 @@ void USliderValuesManager::OnComponentCreated(USliderValuesComponent* sliderValu
 {
 	check(sliderValuesComp);
 
-	m_Components.AddUnique(sliderValuesComp);
+	int32 existingIdx = FindData(sliderValuesComp->GetUniqueID());
+	if (existingIdx != INDEX_NONE)
+	{
+		// Already exists?!
+		check(false);
+		return;
+	}
 
-	ComponentUpdateInfo updateInfo;
-	updateInfo.m_Id = sliderValuesComp->GetUniqueID();
-
-	m_UpdateInfo.Push(updateInfo);
-
-	check(m_Components.Num() == m_UpdateInfo.Num());
+	AllocateData(sliderValuesComp);
 }
 
 void USliderValuesManager::OnComponentDestroyed(USliderValuesComponent* sliderValuesComp)
@@ -109,30 +133,56 @@ void USliderValuesManager::OnComponentDestroyed(USliderValuesComponent* sliderVa
 	check(sliderValuesComp);
 	// Expected to happen rarely, so let's just remove from array directly
 	int32 id = sliderValuesComp->GetUniqueID();
-	int32 idx = FindUpdateInfo(id);
-	if (m_UpdateInfo.IsValidIndex(idx))
-	{
-		m_UpdateInfo.RemoveAtSwap(idx);
-	}
+	int32 idx = FindData(id);
+	check(idx != INDEX_NONE); // Was never rregistered?!
 
-	if (m_Components.IsValidIndex(idx))
+	if (idx != INDEX_NONE)
 	{
-		check(m_Components[idx]->GetUniqueID() == id);
-		m_Components.RemoveAtSwap(idx);
+		DeallocateData(sliderValuesComp);
 	}
-	else
-	{
-		check(false);
-	}
-
-	check(m_Components.Num() == m_UpdateInfo.Num());
 }
 
-int32 USliderValuesManager::FindUpdateInfo(int32 id) const
+void USliderValuesManager::OnComponentUpdated(USliderValuesComponent* sliderValuesComp)
 {
-	for (int32 i = 0; i < m_UpdateInfo.Num(); ++i)
+	int32 idx = FindData(sliderValuesComp->GetUniqueID());
+	if (idx != INDEX_NONE)
 	{
-		if (m_UpdateInfo[i].m_Id == id)
+		m_ComponentsData[idx].m_IsDirty = true;
+	}
+}
+
+void USliderValuesManager::AllocateData(USliderValuesComponent* sliderValuesComp)
+{
+	int32 idx = FindData(USliderValuesComponent::FData::INVALID_ID);
+	if (idx == INDEX_NONE)
+	{
+		idx = m_ComponentsData.AddUninitialized();
+	}
+
+	m_ComponentsData[idx].m_Component = sliderValuesComp;
+	m_ComponentsData[idx].m_Id = sliderValuesComp->GetUniqueID();
+	m_ComponentsData[idx].m_IsDirty = false;
+}
+
+void USliderValuesManager::DeallocateData(USliderValuesComponent* sliderValuesComp)
+{
+	verify(sliderValuesComp);
+
+	if (sliderValuesComp)
+	{
+		int32 idx = FindData(sliderValuesComp->GetUniqueID());
+		checkf(idx != INDEX_NONE, TEXT("Mistracked allocation! Trying to deallocate component data that doesn't exist!"));
+
+		m_ComponentsData[idx].m_Component = nullptr;
+		m_ComponentsData[idx].m_Id = USliderValuesComponent::FData::INVALID_ID;
+	}
+}
+
+int32 USliderValuesManager::FindData(int32 id) const
+{
+	for (int32 i = 0; i < m_ComponentsData.Num(); ++i)
+	{
+		if (m_ComponentsData[i].m_Id == id)
 			return i;
 	}
 
@@ -141,9 +191,9 @@ int32 USliderValuesManager::FindUpdateInfo(int32 id) const
 
 void USliderValuesManager::GetDirtyIndices(Array<int32>& outIndices)
 {
-	for (int32 i = 0; i < m_UpdateInfo.Num(); ++i)
+	for (int32 i = 0; i < m_ComponentsData.Num(); ++i)
 	{
-		if (m_UpdateInfo[i].m_IsDirty == true)
+		if (m_ComponentsData[i].m_IsDirty == true)
 		{
 			outIndices.Add(i);
 		}

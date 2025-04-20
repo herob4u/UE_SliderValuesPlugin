@@ -61,11 +61,13 @@ void USliderValuesComponent::EndPlay(EEndPlayReason::Type reason)
 void USliderValuesComponent::BuildSliderInstances(const TArray<FName>& sliderIds, const UDataTable& sliderDefinitionsDt)
 {
 	SliderInstances.Reserve(sliderIds.Num());
+	SliderDefinitions.Reserve(sliderIds.Num());
 
 	for (int sliderIdx = 0; sliderIdx < sliderIds.Num(); ++sliderIdx)
 	{
 		FSliderDefinition* definition = (FSliderDefinition*)sliderDefinitionsDt.FindRowUnchecked(sliderIds[sliderIdx]);
-		SliderInstances.Emplace(definition->Links, definition->DefaultValue);
+		SliderInstances.Emplace(definition->Links, GetDefaultValue(*definition));
+		SliderDefinitions.Emplace(*definition);
 	}
 }
 
@@ -96,6 +98,11 @@ void USliderValuesComponent::RegisterSliderDefinitions(UDataTable* sliderDefinit
 	{
 		UE_LOG(LogTemp, Log, TEXT("SliderValuesComponent has no slider definitions! Component has no effect"));
 	}
+}
+
+float USliderValuesComponent::GetDefaultValue(const FSliderDefinition& sliderDefinition)
+{
+	return FMath::Clamp(sliderDefinition.DefaultValue, sliderDefinition.SliderMin, sliderDefinition.SliderMax);
 }
 
 int32 USliderValuesComponent::GetSliderIdx(const FName& sliderId) const
@@ -141,20 +148,22 @@ void USliderValuesComponent::ResetDefaultValues()
 {
 	for (int32 sliderIdx = 0; sliderIdx < SliderDefinitions.Num(); ++sliderIdx)
 	{
-		ResetDefaultValue(sliderIdx);
+		ResetDefaultValue(sliderIdx, false);
 	}
+
+	OnValuesChanged();
 }
 
-void USliderValuesComponent::ResetDefaultValue(const FName& sliderId)
+void USliderValuesComponent::ResetDefaultValue(const FName& sliderId, bool sendChangedEvent)
 {
 	int32 sliderIdx = SliderIndexMap.FindRef(sliderId, INDEX_NONE);
 	if (sliderIdx != INDEX_NONE)
 	{
-		ResetDefaultValue(sliderIdx);
+		ResetDefaultValue(sliderIdx, sendChangedEvent);
 	}
 }
 
-void USliderValuesComponent::ResetDefaultValue(int32 sliderIdx)
+void USliderValuesComponent::ResetDefaultValue(int32 sliderIdx, bool sendChangedEvent)
 {
 	if (SliderDefinitions.IsValidIndex(sliderIdx))
 	{
@@ -164,21 +173,23 @@ void USliderValuesComponent::ResetDefaultValue(int32 sliderIdx)
 			return;
 		}
 
-		SliderInstances[sliderIdx].Value = SliderDefinitions[sliderIdx].DefaultValue;
-		OnValuesChanged();
+		SliderInstances[sliderIdx].Value = GetDefaultValue(SliderDefinitions[sliderIdx]);
+
+		if(sendChangedEvent)
+			OnValuesChanged();
 	}
 }
 
-void USliderValuesComponent::SetSliderValue(const FName sliderId, float value)
+void USliderValuesComponent::SetSliderValue(const FName sliderId, float value, bool sendChangedEvent)
 {
 	int32 sliderIdx = SliderIndexMap.FindRef(sliderId, INDEX_NONE);
 	if (sliderIdx != INDEX_NONE)
 	{
-		SetSliderValue(sliderIdx, value);
+		SetSliderValue(sliderIdx, value, sendChangedEvent);
 	}
 }
 
-void USliderValuesComponent::SetSliderValue(int32 sliderIdx, float value)
+void USliderValuesComponent::SetSliderValue(int32 sliderIdx, float value, bool sendChangedEvent)
 {
 	if (!SliderInstances.IsValidIndex(sliderIdx))
 	{
@@ -187,14 +198,16 @@ void USliderValuesComponent::SetSliderValue(int32 sliderIdx, float value)
 	}
 
 	SliderInstances[sliderIdx].Value = value;
-	OnValuesChanged();
+
+	if(sendChangedEvent)
+		OnValuesChanged();
 }
 
 void USliderValuesComponent::SetSliderValues(const TMap<FName, float>& sliderIdToValues)
 {
 	for (auto pair : sliderIdToValues)
 	{
-		SetSliderValue(pair.Key, pair.Value);
+		SetSliderValue(pair.Key, pair.Value, false);
 	}
 
 	OnValuesChanged();

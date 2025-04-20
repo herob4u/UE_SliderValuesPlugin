@@ -29,7 +29,13 @@ struct FSliderDefinition : public FTableRowBase
 	FText DisplayName;
 
 	UPROPERTY(EditDefaultsOnly)
-	float DefaultValue;
+	float DefaultValue = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float SliderMin = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float SliderMax = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, meta = (ShowOnlyInnerProperties, FullyExpand = true, ExcludeBaseStruct), NoClear)
 	TArray<TInstancedStruct<FSliderLinkBase>> Links;
