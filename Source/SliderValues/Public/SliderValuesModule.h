@@ -13,6 +13,7 @@ public:
 
 	TDelegate<class USliderValuesConfig* ()> GetConfigCallback;
 
+	//void RegisterSliderLink(const UScriptStruct* sliderLinkStruct, evalFunc);
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;

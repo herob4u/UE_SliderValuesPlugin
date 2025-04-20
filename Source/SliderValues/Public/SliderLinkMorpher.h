@@ -6,14 +6,6 @@
 #include "SliderLinkBase.h"
 #include "SliderLinkMorpher.generated.h"
 
-USTRUCT()
-struct SLIDERVALUES_API FMorpherState : public FSliderStateBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere)
-	UCurveFloat* StateValues;
-};
 /**
  * 
  */

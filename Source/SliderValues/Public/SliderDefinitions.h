@@ -34,6 +34,7 @@ struct FSliderDefinition : public FTableRowBase
 	UPROPERTY(EditDefaultsOnly, meta = (ShowOnlyInnerProperties, FullyExpand = true, ExcludeBaseStruct), NoClear)
 	TArray<TInstancedStruct<FSliderLinkBase>> Links;
 };
+using SliderLinks = TArray<TInstancedStruct<FSliderLinkBase>>;
 
 /**
  * 

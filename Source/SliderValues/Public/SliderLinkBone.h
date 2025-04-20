@@ -7,21 +7,6 @@
 #include "Curves/CurveVector.h"
 #include "SliderLinkBone.generated.h"
 
-USTRUCT()
-struct SLIDERVALUES_API FBoneState : public FSliderStateBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere)
-	UCurveVector* PositionValues;
-
-	UPROPERTY(EditAnywhere)
-	UCurveVector* EulerValues;
-
-	UPROPERTY(EditAnywhere)
-	UCurveVector* ScaleValues;
-};
-
 /**
  * 
  */
@@ -36,6 +21,7 @@ struct SLIDERVALUES_API FSliderLinkBone : public FSliderLinkBase
 	UPROPERTY(EditAnywhere)
 	UCurveVector* PositionStateValues;
 
+	// In degrees
 	UPROPERTY(EditAnywhere)
 	UCurveVector* EulerStateValues;
 

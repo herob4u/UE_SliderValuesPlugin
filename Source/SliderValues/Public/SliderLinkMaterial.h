@@ -6,15 +6,6 @@
 #include "SliderLinkBase.h"
 #include "SliderLinkMaterial.generated.h"
 
-struct SLIDERVALUES_API FMaterialScalarState
-{
-};
-
-struct SLIDERVALUES_API FMaterialVectorState
-{
-
-};
-
 /**
  * 
  */

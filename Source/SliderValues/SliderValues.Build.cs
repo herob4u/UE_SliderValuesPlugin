@@ -38,6 +38,7 @@ public class SliderValues : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"ImGui",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

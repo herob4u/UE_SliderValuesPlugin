@@ -6,15 +6,6 @@
 #include "UObject/NoExportTypes.h"
 #include "SliderLinkBase.generated.h"
 
-USTRUCT()
-struct SLIDERVALUES_API FSliderStateBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, meta = (DisplayPriority = 0))
-	float State;
-};
-
 template<typename TSliderLink>
 struct FSliderLinkTrait
 {
