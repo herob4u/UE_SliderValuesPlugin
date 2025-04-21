@@ -107,10 +107,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UDataTable> SliderDefinitionsDt;
 
-	// A Parameter can only be controlled by one, and only one slider.
-	// This allows for selective updates, see UpdateModified()
-	bool ExclusiveParameters;
-
 	TArray<FName> SliderIds;
 	TArray<FSliderInstance> SliderInstances;
 	TArray<FSliderDefinition> SliderDefinitions;
